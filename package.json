@@ -1,0 +1,27 @@
+{
+	"name": "the-scroll",
+	"private": true,
+	"workspaces": [
+		"services/*",
+		"packages/*"
+	],
+	"packageManager": "npm@12.0.2",
+	"scripts": {
+		"build": "turbo run build",
+		"lint": "eslint . --fix",
+		"dev": "dotenv -e .env -- ./dev.sh",
+		"db:migrate": "dotenv -e .env -- ./migrate.sh",
+		"db:generate": "dotenv -e .env -- turbo run db:generate"
+	},
+	"devDependencies": {
+		"@types/node": "^26.4.0",
+		"dotenv-cli": "^11.0.0",
+		"eslint": "^10.9.1",
+		"eslint-config-prettier": "^10.1.8",
+		"eslint-plugin-prettier": "^5.5.6",
+		"prettier": "^3.9.6",
+		"tsx": "^4.23.12",
+		"turbo": "^2.10.12",
+		"typescript-eslint": "^8.68.0"
+	}
+}

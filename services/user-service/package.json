@@ -1,0 +1,35 @@
+{
+	"name": "@the-scroll/auth-service",
+	"private": true,
+	"version": "0.0.1",
+	"type": "module",
+	"scripts": {
+		"dev": "tsx watch src/index.ts",
+		"build": "tsc",
+		"lint": "eslint . --fix",
+		"start": "node dist/index.js",
+		"db:migrate": "prisma migrate dev",
+		"db:migrate:prod": "prisma migrate deploy",
+		"db:generate": "prisma generate"
+	},
+	"devDependencies": {
+		"@types/bcrypt": "^6.0.0",
+		"@types/node": "^26.4.0",
+		"@types/pg": "^8.23.1",
+		"prisma": "^7.10.0",
+		"turbo": "^2.10.12"
+	},
+	"dependencies": {
+		"@fastify/cookie": "^11.1.2",
+		"@fastify/cors": "^11.3.0",
+		"@prisma/adapter-pg": "^7.10.0",
+		"@prisma/client": "^7.10.0",
+		"@the-scroll/types": "*",
+		"bcrypt": "^6.0.0",
+		"dotenv": "^17.4.2",
+		"fastify": "^5.12.1",
+		"fastify-type-provider-zod": "^7.0.0",
+		"pg": "^8.23.0",
+		"zod": "^4.4.3"
+	}
+}

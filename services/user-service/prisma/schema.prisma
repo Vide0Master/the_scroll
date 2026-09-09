@@ -1,0 +1,29 @@
+generator client {
+    provider = "prisma-client"
+    output   = "./generated/prisma"
+}
+
+datasource db {
+    provider = "postgresql"
+}
+
+model User {
+    userID      String  @id @unique @default(uuid())
+    userName    String  @unique
+    visibleName String?
+    email       String
+    password    String
+
+    createdAt DateTime @default(now())
+
+    sessions Session[]
+}
+
+model Session {
+    sessionID String    @id @unique @default(uuid())
+    userID    String
+    user      User      @relation(fields: [userID], references: [userID])
+    infinite  Boolean   @default(true)
+    createdAt DateTime  @default(now())
+    expiresAt DateTime?
+}

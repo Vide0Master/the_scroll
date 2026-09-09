@@ -1,0 +1,26 @@
+@import "tailwindcss";
+
+/* 1. Регистрируем имена цветов для Tailwind */
+@theme {
+    --color-surface: var(--theme-surface);
+    --color-main: var(--theme-main);
+    --color-outline: var(--theme-outline);
+    --color-control: var(--theme-control);
+    --color-accent: var(--theme-accent);
+}
+
+:root {
+    --theme-surface: #0f172a;
+    --theme-main: #f8fafc;
+    --theme-outline: #334155;
+    --theme-control: #1e293b;
+    --theme-accent: #3b82f6;
+}
+
+:root[data-theme="light"] {
+    --theme-surface: #ffffff;
+    --theme-main: #0f172a;
+    --theme-outline: #cbd5e1;
+    --theme-control: #f1f5f9;
+    --theme-accent: #2563eb;
+}

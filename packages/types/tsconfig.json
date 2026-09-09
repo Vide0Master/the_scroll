@@ -1,0 +1,35 @@
+{
+	"compilerOptions": {
+		/* Базовые настройки среды */
+		"target": "ESNext",
+		"module": "ESNext",
+		"moduleResolution": "bundler", // Идеально для работы с Vite
+		"lib": ["DOM", "DOM.Iterable", "ESNext"],
+
+		/* Главные настройки для пакета типов */
+		"declaration": true, // Генерирует файлы .d.ts
+		"emitDeclarationOnly": true, // НЕ генерирует .js файлы (ускоряет сборку)
+		"declarationMap": true, // Позволяет в редакторе переходить к исходному коду типов (Go to Definition)
+
+		/* Для работы в монорепозитории (если пакет лежит рядом с основным приложением) */
+		"composite": true, // Позволяет другим проектам ссылаться на этот пакет (Project References)
+
+		/* Строгость (стандарт для хорошего кода) */
+		"strict": true,
+		"noImplicitAny": true,
+		"strictNullChecks": true,
+
+		/* Оптимизация и совместимость */
+		"esModuleInterop": true,
+		"skipLibCheck": true, // Не проверяет типы внутри node_modules (сильно ускоряет tsc)
+		"forceConsistentCasingInFileNames": true,
+		"isolatedModules": true,
+
+		/* Куда складывать собранные типы (если нужно) */
+		"outDir": "./dist"
+	},
+
+	/* Где искать файлы */
+	"include": ["src/**/*"],
+	"exclude": ["node_modules", "dist"]
+}

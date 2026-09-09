@@ -1,0 +1,10 @@
+{
+	"name": "@the-scroll/types",
+	"type": "module",
+	"types": "./src/types.ts",
+	"exports": {
+		".": {
+			"types": "./src/types.ts"
+		}
+	}
+}
