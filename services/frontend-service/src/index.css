@@ -1,26 +1,57 @@
 @import "tailwindcss";
 
-/* 1. Регистрируем имена цветов для Tailwind */
+/* Tailwind tokens. Runtime theme variables (--theme-*) are set by scripts/theme.ts. */
 @theme {
     --color-surface: var(--theme-surface);
+    --color-panel: var(--theme-panel);
     --color-main: var(--theme-main);
-    --color-outline: var(--theme-outline);
-    --color-control: var(--theme-control);
+    --color-muted: color-mix(in srgb, var(--theme-main) 60%, var(--theme-surface));
+    --color-line: var(--theme-line);
     --color-accent: var(--theme-accent);
+    --color-on-accent: var(--theme-on-accent);
+    --color-hover: color-mix(in srgb, var(--theme-main) 8%, transparent);
+
+    /*
+     * "Technical Ledger" visual style: mono for UI chrome (nav, labels, names/handles,
+     * timestamps, buttons), sans for content (post text, form copy). See CLAUDE.md.
+     */
+    --font-sans: 'IBM Plex Sans', ui-sans-serif, sans-serif;
+    --font-mono: 'IBM Plex Mono', ui-monospace, monospace;
 }
 
+/* Dark fallback until the active theme is applied. Keep in sync with BUILT_IN_THEMES.dark. */
 :root {
-    --theme-surface: #0f172a;
-    --theme-main: #f8fafc;
-    --theme-outline: #334155;
-    --theme-control: #1e293b;
-    --theme-accent: #3b82f6;
+    --theme-surface: #0b0f14;
+    --theme-panel: #16181c;
+    --theme-main: #e7e9ea;
+    --theme-line: #2f3336;
+    --theme-accent: #1d9bf0;
+    --theme-on-accent: #000000;
 }
 
-:root[data-theme="light"] {
-    --theme-surface: #ffffff;
-    --theme-main: #0f172a;
-    --theme-outline: #cbd5e1;
-    --theme-control: #f1f5f9;
-    --theme-accent: #2563eb;
+body {
+    background-color: var(--color-surface);
+    color: var(--color-main);
+    font-family: var(--font-sans);
+}
+
+@keyframes toast-in {
+    from {
+        opacity: 0;
+        transform: translateY(-0.5rem);
+    }
+    to {
+        opacity: 1;
+        transform: none;
+    }
+}
+
+.toast-in {
+    animation: toast-in 150ms ease-out;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .toast-in {
+        animation: none;
+    }
 }

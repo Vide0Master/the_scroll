@@ -1,5 +1,6 @@
 generator client {
-  provider = "prisma-client-js"
+  provider = "prisma-client"
+  output   = "./generated/prisma"
 }
 
 datasource db {
@@ -11,9 +12,72 @@ model Post {
   authorID  String
   content   String
   media     String[] @default([])
+  // Set on a reply: the post it answers (any post, including another reply). A reply is a
+  // normal post in every other way: same content rules, media, editing and ownership.
+  parentPostID String?
+  parent       Post?   @relation("PostReplies", fields: [parentPostID], references: [postID])
+  replies      Post[]  @relation("PostReplies")
+  // Soft delete: the row stays so threads keep their shape and clients can say "deleted by the
+  // author". Content and media are cleared at the same time, so nothing of the post survives.
+  deletedAt DateTime?
+  // Set when a moderator (not the author) deleted it; the reason is for the record only and
+  // never sent to clients. removedByID is a user-service id, not a foreign key.
+  removedByID   String?
+  removalReason String?
+  tags      PostTag[]
+  mentions  PostMention[]
+  likes     PostLike[]
+  views     PostView[]
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   @@index([authorID])
+  @@index([parentPostID])
   @@index([createdAt(sort: Desc)])
+}
+
+// Hashtags of a post, lowercased and parsed by the server from `content` on every save, so the
+// text stays the single source of truth. Rows go away with the post (or when it is edited).
+model PostTag {
+  postID String
+  tag    String
+  post   Post   @relation(fields: [postID], references: [postID], onDelete: Cascade)
+
+  @@id([postID, tag])
+  @@index([tag])
+}
+
+// The @names of a post that were real accounts when it was saved; only these render as links.
+// userID is a reference to user-service, never a foreign key.
+model PostMention {
+  postID   String
+  userID   String
+  userName String
+  post     Post   @relation(fields: [postID], references: [postID], onDelete: Cascade)
+
+  @@id([postID, userID])
+}
+
+// One like per account and post. `userID` references user-service, never a foreign key. Rows go
+// with the post; unliking deletes the row, so the counters always equal the rows.
+model PostLike {
+  postID    String
+  userID    String
+  createdAt DateTime @default(now())
+  post      Post     @relation(fields: [postID], references: [postID], onDelete: Cascade)
+
+  @@id([postID, userID])
+  @@index([createdAt])
+}
+
+// A signed-in account saw the post (once per account, never the author): guests are not counted
+// because nothing stops one client from posting many views as a guest.
+model PostView {
+  postID    String
+  userID    String
+  createdAt DateTime @default(now())
+  post      Post     @relation(fields: [postID], references: [postID], onDelete: Cascade)
+
+  @@id([postID, userID])
+  @@index([createdAt])
 }

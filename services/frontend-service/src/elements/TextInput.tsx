@@ -38,7 +38,7 @@ export const TextInput = forwardRef<HTMLInputElement, InputProps>(
 			<input
 				ref={ref}
 				type={type}
-				className={`px-2 py-1 text-main border border-accent outline-none focus-visible:rounded-none ${className}`}
+				className={`px-3 py-2 bg-transparent text-main placeholder:text-muted border border-line outline-none focus:border-accent ${className}`}
 				placeholder={children || props.placeholder}
 				onChange={handleChange}
 				{...props}

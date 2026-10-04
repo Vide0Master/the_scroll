@@ -2,3 +2,14 @@ node_modules
 .env
 .turbo
 services/media-service/uploads
+
+CLAUDE.md
+CLAUDE.local.md
+.claude
+.mcp.json
+.playwright-mcp
+.superpowers
+docs/superpowers
+
+tests/.results
+tests/.report

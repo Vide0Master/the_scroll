@@ -1,166 +1,239 @@
-import React, { useState, useRef, type ChangeEvent } from 'react';
-import { PhotoIcon, XMarkIcon } from '@heroicons/react/24/outline';
-import { api } from '../scripts/api';
-import { Button } from './Button';
+import React, {
+	useRef,
+	useState,
+	type ChangeEvent,
+	type ClipboardEvent,
+	type KeyboardEvent,
+} from 'react';
+import { useTranslation } from 'react-i18next';
+import { PhotoIcon } from '@heroicons/react/24/outline';
+import type { FeedPost, UserProfile } from '@the-scroll/types';
+import { Button } from '../elements/Button';
+import { applyMention, findMentionQuery } from '../scripts/mentions';
+import { useComposer } from '../scripts/useComposer';
+import { useMentionSearch } from '../scripts/useMentionSearch';
+import { useUnsavedGuard } from '../scripts/useUnsavedGuard';
+import { MediaAttachments } from './MediaAttachments';
+import { MentionSuggestions } from './MentionSuggestions';
+import { UnsavedChangesPopup } from './UnsavedChangesPopup';
 
 export interface CreatePostFormProps {
-	onPostCreated?: () => void;
+	// Create mode (default) when omitted; edit mode when set, prefilled from this post.
+	editingPost?: FeedPost;
+	// Reply mode: the new post answers this post.
+	parentPostID?: string;
+	autoFocus?: boolean;
+	onPostCreated?: (post?: FeedPost) => void;
+	onPostUpdated?: (post: FeedPost) => void;
 }
 
-export function CreatePostForm({ onPostCreated }: CreatePostFormProps) {
-	const [content, setContent] = useState('');
-	const [mediaUrls, setMediaUrls] = useState<string[]>([]);
-	const [isUploading, setIsUploading] = useState(false);
-	const [isSubmitting, setIsSubmitting] = useState(false);
-	const [errorMessage, setErrorMessage] = useState<string | null>(null);
+export function CreatePostForm({
+	editingPost,
+	parentPostID,
+	autoFocus = false,
+	onPostCreated,
+	onPostUpdated,
+}: CreatePostFormProps) {
+	const { t } = useTranslation();
+	const composer = useComposer({ editingPost, parentPostID, onPostCreated, onPostUpdated });
+	const { content, setContent, isEditing } = composer;
+	const guard = useUnsavedGuard(composer.isDirty);
 
+	// @name hints: the caret position decides whether one is being typed; Escape hides the
+	// list for that "@" until another is started.
+	const [caret, setCaret] = useState(0);
+	const [highlighted, setHighlighted] = useState(0);
+	const [dismissedAt, setDismissedAt] = useState<number | null>(null);
+
+	const textareaRef = useRef<HTMLTextAreaElement>(null);
 	const fileInputRef = useRef<HTMLInputElement>(null);
 
+	const mention = findMentionQuery(content, caret);
+	const suggestions = useMentionSearch(
+		mention && mention.start !== dismissedAt ? mention.query : null,
+	);
+	const activeSuggestion = Math.min(highlighted, suggestions.length - 1);
+
+	const handlePickMention = (picked: UserProfile) => {
+		if (!mention) {
+			return;
+		}
+
+		const next = applyMention(content, caret, mention.start, picked.userName);
+		setContent(next.text);
+		setCaret(next.caret);
+
+		// The new caret can only be set once React has put the new text into the textarea.
+		requestAnimationFrame(() => {
+			textareaRef.current?.focus();
+			textareaRef.current?.setSelectionRange(next.caret, next.caret);
+		});
+	};
+
+	const handleTextareaKeyDown = (event: KeyboardEvent<HTMLTextAreaElement>) => {
+		// Ctrl/Cmd+Enter sends, like the button.
+		if (event.key === 'Enter' && (event.ctrlKey || event.metaKey)) {
+			event.preventDefault();
+			void composer.submit();
+			return;
+		}
+
+		if (suggestions.length === 0 || !mention) {
+			return;
+		}
+
+		if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
+			event.preventDefault();
+			const step = event.key === 'ArrowDown' ? 1 : -1;
+			setHighlighted((activeSuggestion + step + suggestions.length) % suggestions.length);
+		} else if (event.key === 'Enter' || event.key === 'Tab') {
+			event.preventDefault();
+			handlePickMention(suggestions[activeSuggestion]);
+		} else if (event.key === 'Escape') {
+			// Closes only the hint list, not a popup this form may be in.
+			event.preventDefault();
+			event.stopPropagation();
+			setDismissedAt(mention.start);
+		}
+	};
+
 	const handleFileChange = async (event: ChangeEvent<HTMLInputElement>) => {
-		const files = event.target.files;
-		if (!files || files.length === 0) {
-			return;
-		}
+		const files = Array.from(event.target.files ?? []);
+		await composer.addFiles(files);
 
-		setErrorMessage(null);
-		setIsUploading(true);
-
-		try {
-			for (const file of Array.from(files)) {
-				const response = await api.media.upload(file);
-				if (response.success && response.file) {
-					setMediaUrls((prev) => [...prev, response.file!.url]);
-				} else {
-					setErrorMessage(
-						response.errorDetails?.description || 'Failed to upload media file',
-					);
-				}
-			}
-		} catch {
-			setErrorMessage('Network error while uploading file');
-		} finally {
-			setIsUploading(false);
-			if (fileInputRef.current) {
-				fileInputRef.current.value = '';
-			}
+		if (fileInputRef.current) {
+			fileInputRef.current.value = '';
 		}
 	};
 
-	const handleRemoveMedia = (indexToRemove: number) => {
-		setMediaUrls((prev) => prev.filter((_, index) => index !== indexToRemove));
+	// Pasting an image (a screenshot) attaches it; pasting text is left alone.
+	const handlePaste = (event: ClipboardEvent<HTMLTextAreaElement>) => {
+		const files = Array.from(event.clipboardData.files).filter(
+			(file) => file.type.startsWith('image/') || file.type.startsWith('video/'),
+		);
+
+		if (files.length > 0) {
+			event.preventDefault();
+			void composer.addFiles(files);
+		}
 	};
 
-	const handleSubmit = async (event: React.FormEvent) => {
+	const handleSubmit = (event: React.FormEvent) => {
 		event.preventDefault();
-
-		if (!content.trim() && mediaUrls.length === 0) {
-			return;
-		}
-
-		setIsSubmitting(true);
-		setErrorMessage(null);
-
-		try {
-			const response = await api.posts.create({
-				content: content.trim(),
-				mediaUrls,
-			});
-
-			if (response.success) {
-				setContent('');
-				setMediaUrls([]);
-				if (onPostCreated) {
-					onPostCreated();
-				}
-			} else {
-				setErrorMessage(response.errorDetails?.description || 'Could not create post');
-			}
-		} catch {
-			setErrorMessage('Failed to send post request');
-		} finally {
-			setIsSubmitting(false);
-		}
+		void composer.submit();
 	};
+
+	// The budget shows once the text is long enough to matter, and turns red past the limit.
+	const showCounter = composer.used >= composer.max * 0.8;
 
 	return (
-		<div className='flex flex-col gap-3 p-4 rounded-xl bg-surface-secondary/40 border border-border/20 w-full'>
+		// In a popup the popup's own border closes the form, so the bottom line is left out there.
+		<div className={`flex flex-col w-full ${isEditing ? '' : 'border-b border-line'}`}>
 			<form
 				onSubmit={handleSubmit}
-				className='flex flex-col gap-3'
+				className='flex flex-col'
 			>
-				<textarea
-					value={content}
-					onChange={(e) => setContent(e.target.value)}
-					placeholder="What's happening?"
-					rows={3}
-					className='w-full bg-transparent text-main placeholder:text-main/40 resize-none outline-none text-sm leading-relaxed p-1 border-none focus:ring-0'
+				<div className='relative'>
+					<textarea
+						ref={textareaRef}
+						value={content}
+						onChange={(e) => {
+							setContent(e.target.value);
+							setCaret(e.target.selectionStart);
+							setHighlighted(0);
+						}}
+						onSelect={(e) => setCaret(e.currentTarget.selectionStart)}
+						onKeyDown={handleTextareaKeyDown}
+						onPaste={handlePaste}
+						aria-autocomplete='list'
+						aria-expanded={suggestions.length > 0}
+						placeholder={t(parentPostID ? 'post.replyPlaceholder' : 'post.placeholder')}
+						autoFocus={autoFocus}
+						rows={3}
+						className='w-full bg-transparent text-main placeholder:text-muted resize-none outline-none text-sm leading-relaxed px-5 py-4 border-none focus:ring-0'
+					/>
+					{suggestions.length > 0 && (
+						<MentionSuggestions
+							users={suggestions}
+							activeIndex={activeSuggestion}
+							onSelect={handlePickMention}
+							onHover={setHighlighted}
+						/>
+					)}
+				</div>
+
+				<MediaAttachments
+					urls={composer.mediaUrls}
+					pending={composer.pending}
+					onRemove={composer.removeMedia}
 				/>
 
-				{mediaUrls.length > 0 && (
-					<div className='grid grid-cols-2 gap-2 mt-1'>
-						{mediaUrls.map((url, idx) => (
-							<div
-								key={url}
-								className='relative rounded-lg overflow-hidden bg-surface border border-border/20 aspect-video'
-							>
-								<img
-									src={url}
-									alt='Attachment'
-									className='w-full h-full object-cover'
-								/>
-								<button
-									type='button'
-									onClick={() => handleRemoveMedia(idx)}
-									className='absolute top-2 right-2 p-1 rounded-full bg-surface/80 hover:bg-surface text-main border border-border/30 transition-colors'
-								>
-									<XMarkIcon className='w-4 h-4' />
-								</button>
-							</div>
-						))}
+				{composer.errorMessage && (
+					<div className='mx-4 mb-4 text-xs text-red-500 border border-red-500/40 px-3 py-2'>
+						{composer.errorMessage}
 					</div>
 				)}
 
-				{errorMessage && (
-					<div className='text-xs text-red-400 bg-red-950/30 border border-red-800/40 px-3 py-2 rounded-lg'>
-						{errorMessage}
-					</div>
-				)}
-
-				<div className='flex items-center justify-between border-t border-border/20 pt-3'>
+				<div className='flex items-center justify-between border-t border-line px-4 py-3'>
 					<div className='flex items-center gap-2'>
 						<input
 							type='file'
 							ref={fileInputRef}
 							onChange={handleFileChange}
 							multiple
-							accept='image/*,video/mp4'
+							accept='image/*,video/mp4,video/webm,video/quicktime'
+							disabled={!composer.canAttachMore}
 							className='hidden'
 						/>
 						<button
 							type='button'
-							disabled={isUploading || isSubmitting}
+							aria-label={t('post.attach')}
+							disabled={composer.isSubmitting || !composer.canAttachMore}
 							onClick={() => fileInputRef.current?.click()}
-							className='p-2 text-main/70 hover:text-main hover:bg-surface-secondary/60 rounded-lg transition-colors disabled:opacity-50'
+							className='p-2 text-accent hover:bg-hover transition-colors disabled:opacity-50'
 						>
-							<PhotoIcon className='w-5 h-5' />
+							<PhotoIcon
+								className='w-5 h-5'
+								strokeWidth={1.25}
+							/>
 						</button>
-						{isUploading && (
-							<span className='text-xs text-main/50 animate-pulse'>Uploading...</span>
+						{composer.isUploading && (
+							<span className='text-xs text-muted animate-pulse'>
+								{t('post.uploading')}
+							</span>
 						)}
 					</div>
 
-					<Button
-						type='submit'
-						disabled={
-							(!content.trim() && mediaUrls.length === 0) ||
-							isSubmitting ||
-							isUploading
-						}
-					>
-						{isSubmitting ? 'Posting...' : 'Post'}
-					</Button>
+					<div className='flex items-center gap-3'>
+						{showCounter && (
+							<span
+								aria-label={t('post.charsLeft', {
+									left: composer.max - composer.used,
+								})}
+								className={`font-mono text-xs ${composer.isOverLimit ? 'text-red-500' : 'text-muted'}`}
+							>
+								{composer.max - composer.used}
+							</span>
+						)}
+						<Button
+							type='submit'
+							disabled={!composer.canSubmit}
+						>
+							{composer.isSubmitting
+								? t('post.posting')
+								: isEditing
+									? t('post.save')
+									: t(parentPostID ? 'post.replyButton' : 'post.postButton')}
+						</Button>
+					</div>
 				</div>
 			</form>
+
+			<UnsavedChangesPopup
+				isOpen={guard.isBlocked}
+				onStay={guard.stay}
+				onLeave={guard.leave}
+			/>
 		</div>
 	);
 }

@@ -4,6 +4,8 @@ export interface BaseSessionUser {
 	userID: string;
 	userName?: string;
 	visibleName?: string | null;
+	/** Role names as user-service reports them (see USER_ROLES in @the-scroll/types). */
+	roles?: string[];
 	createdAt?: Date;
 }
 

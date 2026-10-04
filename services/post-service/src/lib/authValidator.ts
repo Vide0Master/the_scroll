@@ -33,6 +33,7 @@ export async function validateUserSessionViaService(
 			userID: data.userData.userID,
 			userName: data.userData.userName,
 			visibleName: data.userData.visibleName,
+			roles: data.userData.roles,
 		};
 	} catch (error) {
 		console.error(`Network error connecting to ${targetUrl}:`, error);

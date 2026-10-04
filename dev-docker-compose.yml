@@ -6,13 +6,13 @@ services:
     ports:
       - "${POSTGRES_PORT:-5432}:5432"
     environment:
-      POSTGRES_USER: ${POSTGRES_USER:-admin}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-supersecret}
-      POSTGRES_MULTIPLE_DATABASES: ${POSTGRES_USER_SERVICE_DB},${POSTGRES_POSTS_SERVICE_DB}
+      POSTGRES_USER: ${POSTGRES_ADMIN:-admin}
+      POSTGRES_PASSWORD: ${POSTGRES_ADMIN_PASSWORD:-supersecret}
+      POSTGRES_MULTIPLE_DATABASES: ${POSTGRES_USER_SERVICE_DB},${POSTGRES_POSTS_SERVICE_DB},${POSTGRES_MEDIA_SERVICE_DB}
     volumes:
       - pg_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-admin}"]
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_ADMIN:-admin}"]
       interval: 5s
       timeout: 5s
       retries: 5

@@ -1,0 +1,41 @@
+generator client {
+    provider = "prisma-client"
+    output   = "./generated/prisma"
+}
+
+datasource db {
+    provider = "postgresql"
+}
+
+// One row per file in uploads/. A file is "in use" while it has at least one MediaUsage row;
+// the orphan sweeper deletes files that stayed unused past the grace period.
+model MediaFile {
+    fileID     String  @id @default(uuid())
+    // The name on disk (<uuid>.<ext>), the last segment of the public URL.
+    storedName String  @unique
+    // The session user who uploaded it. Null for legacy files (see isLegacy).
+    ownerID    String?
+    mimeType   String
+    size       Int
+    // Found on disk without a record (uploaded before tracking existed, or a crash between
+    // writing the file and its row). Nobody knows what uses them, so they are never swept.
+    isLegacy   Boolean @default(false)
+    createdAt  DateTime @default(now())
+    // Since when nothing uses the file; null while something does. Starts at upload time.
+    unusedSince DateTime? @default(now())
+
+    usages MediaUsage[]
+
+    @@index([unusedSince])
+}
+
+// "Entity `refID` of `kind` uses this file", reported by the owning service on every write.
+model MediaUsage {
+    fileID String
+    file   MediaFile @relation(fields: [fileID], references: [fileID], onDelete: Cascade)
+    kind   String
+    refID  String
+
+    @@id([fileID, kind, refID])
+    @@index([kind, refID])
+}

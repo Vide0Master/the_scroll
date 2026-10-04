@@ -17,8 +17,8 @@
 
 import * as runtime from "@prisma/client/runtime/index-browser"
 
-export type * from '../models.js'
-export type * from './prismaNamespace.js'
+export type * from '../models'
+export type * from './prismaNamespace'
 
 export const Decimal = runtime.Decimal
 
@@ -52,7 +52,10 @@ export const AnyNull = runtime.AnyNull
 
 export const ModelName = {
   Post: 'Post',
-  Session: 'Session'
+  PostTag: 'PostTag',
+  PostMention: 'PostMention',
+  PostLike: 'PostLike',
+  PostView: 'PostView'
 } as const
 
 export type ModelName = (typeof ModelName)[keyof typeof ModelName]
@@ -76,6 +79,10 @@ export const PostScalarFieldEnum = {
   authorID: 'authorID',
   content: 'content',
   media: 'media',
+  parentPostID: 'parentPostID',
+  deletedAt: 'deletedAt',
+  removedByID: 'removedByID',
+  removalReason: 'removalReason',
   createdAt: 'createdAt',
   updatedAt: 'updatedAt'
 } as const
@@ -83,13 +90,39 @@ export const PostScalarFieldEnum = {
 export type PostScalarFieldEnum = (typeof PostScalarFieldEnum)[keyof typeof PostScalarFieldEnum]
 
 
-export const SessionScalarFieldEnum = {
-  sessionID: 'sessionID',
+export const PostTagScalarFieldEnum = {
+  postID: 'postID',
+  tag: 'tag'
+} as const
+
+export type PostTagScalarFieldEnum = (typeof PostTagScalarFieldEnum)[keyof typeof PostTagScalarFieldEnum]
+
+
+export const PostMentionScalarFieldEnum = {
+  postID: 'postID',
+  userID: 'userID',
+  userName: 'userName'
+} as const
+
+export type PostMentionScalarFieldEnum = (typeof PostMentionScalarFieldEnum)[keyof typeof PostMentionScalarFieldEnum]
+
+
+export const PostLikeScalarFieldEnum = {
+  postID: 'postID',
   userID: 'userID',
   createdAt: 'createdAt'
 } as const
 
-export type SessionScalarFieldEnum = (typeof SessionScalarFieldEnum)[keyof typeof SessionScalarFieldEnum]
+export type PostLikeScalarFieldEnum = (typeof PostLikeScalarFieldEnum)[keyof typeof PostLikeScalarFieldEnum]
+
+
+export const PostViewScalarFieldEnum = {
+  postID: 'postID',
+  userID: 'userID',
+  createdAt: 'createdAt'
+} as const
+
+export type PostViewScalarFieldEnum = (typeof PostViewScalarFieldEnum)[keyof typeof PostViewScalarFieldEnum]
 
 
 export const SortOrder = {
@@ -106,4 +139,12 @@ export const QueryMode = {
 } as const
 
 export type QueryMode = (typeof QueryMode)[keyof typeof QueryMode]
+
+
+export const NullsOrder = {
+  first: 'first',
+  last: 'last'
+} as const
+
+export type NullsOrder = (typeof NullsOrder)[keyof typeof NullsOrder]
 
