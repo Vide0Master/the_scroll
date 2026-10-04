@@ -7,16 +7,45 @@ datasource db {
     provider = "postgresql"
 }
 
+// Mirrored by USER_ROLES in packages/types.
+enum Role {
+    ADMIN
+    MODERATOR
+}
+
 model User {
     userID      String  @id @unique @default(uuid())
     userName    String  @unique
     visibleName String?
-    email       String
+    email       String  @unique
     password    String
+
+    // Profile media: /api/media/file/... paths from media-service, and the banner gradient's two
+    // colors (chosen client-side). The server validates their shape and stores them as-is.
+    avatarUrl          String?
+    bannerUrl          String?
+    bannerGradientFrom String?
+    bannerGradientTo   String?
+
+    // Empty for a regular user. Only an admin (or the CLI, `npm run role:set`) changes it.
+    roles Role[] @default([])
+
+    // A ban keeps the row (so the name stays reserved) but ends the sessions; the email also goes
+    // to BlockedEmail so it can't be used to register a new account.
+    bannedAt   DateTime?
+    banReason  String?
+    bannedByID String?
 
     createdAt DateTime @default(now())
 
     sessions Session[]
+
+    following     Follow[]       @relation("Follower")
+    followers     Follow[]       @relation("Followee")
+    notifications Notification[] @relation("Recipient")
+    caused        Notification[] @relation("Actor")
+
+    settings UserSettings?
 }
 
 model Session {
@@ -26,4 +55,79 @@ model Session {
     infinite  Boolean   @default(true)
     createdAt DateTime  @default(now())
     expiresAt DateTime?
+}
+
+
+enum MailStatus {
+    PENDING
+    SENT
+    FAILED
+    CONFIRMED
+}
+
+model PendingRegistration {
+    id           String     @id @unique @default(uuid())
+    email        String     @unique
+    userName     String     @unique
+    passwordHash String
+    tokenHash    String     @unique
+    mailStatus   MailStatus @default(PENDING)
+    mailError    String?
+    lastSentAt   DateTime?
+    sendCount    Int        @default(0)
+    expiresAt    DateTime
+    createdAt    DateTime   @default(now())
+}
+
+model UserSettings {
+    userID       String   @id
+    user         User     @relation(fields: [userID], references: [userID], onDelete: Cascade)
+    themeId      String   @default("dark")
+    customThemes Json     @default("[]")
+    updatedAt    DateTime @updatedAt
+}
+
+// Emails of banned accounts, lowercased. Kept separately from User so the block survives even
+// if the account row is ever removed.
+model BlockedEmail {
+    email       String   @id
+    reason      String?
+    blockedByID String
+    blockedAt   DateTime @default(now())
+}
+
+// "followerID follows followeeID". Both ends live in this database, so plain relations.
+model Follow {
+    followerID String
+    followeeID String
+    createdAt  DateTime @default(now())
+    follower   User     @relation("Follower", fields: [followerID], references: [userID], onDelete: Cascade)
+    followee   User     @relation("Followee", fields: [followeeID], references: [userID], onDelete: Cascade)
+
+    @@id([followerID, followeeID])
+    @@index([followeeID])
+}
+
+enum NotificationType {
+    FOLLOW
+    REPLY
+    MENTION
+    LIKE
+}
+
+// Something that happened to `recipient` because of `actor`. postID points into post-service
+// (a reply, a post that mentions the recipient, or the post that was liked) and is not a foreign key.
+model Notification {
+    id          String           @id @default(uuid())
+    recipientID String
+    actorID     String
+    type        NotificationType
+    postID      String?
+    createdAt   DateTime         @default(now())
+    readAt      DateTime?
+    recipient   User             @relation("Recipient", fields: [recipientID], references: [userID], onDelete: Cascade)
+    actor       User             @relation("Actor", fields: [actorID], references: [userID], onDelete: Cascade)
+
+    @@index([recipientID, createdAt(sort: Desc)])
+    @@index([recipientID, readAt])
 }

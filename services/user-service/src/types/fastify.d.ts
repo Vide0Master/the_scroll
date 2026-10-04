@@ -1,11 +1,8 @@
 import { FastifyReply } from 'fastify';
 
-export interface UserSessionData {
-	userID: string;
-	userName: string;
-	visibleName: string | null;
-	createdAt: Date;
-}
+import type { UserProfile } from '@the-scroll/types';
+
+export type UserSessionData = UserProfile;
 
 declare module 'fastify' {
 	interface FastifyRequest {

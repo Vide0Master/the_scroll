@@ -24,6 +24,11 @@ export default defineConfig({
 				changeOrigin: true,
 				rewrite: (path) => path.replace(/^\/api/, ''),
 			},
+			'/api/notifications': {
+				target: `http://localhost:${usersPort}`,
+				changeOrigin: true,
+				rewrite: (path) => path.replace(/^\/api/, ''),
+			},
 			'/api/posts': {
 				target: `http://localhost:${postsPort}`,
 				changeOrigin: true,

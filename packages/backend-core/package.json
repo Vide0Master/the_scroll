@@ -25,6 +25,7 @@
 		"dotenv-expand": "^1000.0.0",
 		"fastify": "^5.12.1",
 		"fastify-plugin": "^6.0.0",
+		"ioredis": "^6.0.0",
 		"prisma": "^7.10.0"
 	},
 	"devDependencies": {

@@ -1,6 +1,11 @@
 export * from './response';
 export * from './factory';
 export * from './plugins/auth';
+export * from './plugins/requireRole';
 export * from './db';
+export { redisUrlFromEnv } from './cache/redisStore';
 export * from './prismaConfig';
 export type * from './types/fastify';
+export * from './internalAuth';
+export * from './mediaUsage';
+export * from './realtime';
